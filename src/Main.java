@@ -1,4 +1,5 @@
 import RedesNeurais.Adaline;
+import RedesNeurais.Madaline;
 import RedesNeurais.Perceptron;
 
 import java.util.Scanner;
@@ -8,12 +9,14 @@ public class Main {
         Scanner e = new Scanner(System.in);
         Perceptron p = new Perceptron();;
         Adaline a = new Adaline();
+        Madaline m = new Madaline();
         int entrada = -1;
 
         while(entrada != 0){
             System.out.println("====================");
             System.out.println("1 - Perceptron");
             System.out.println("2 - Adaline");
+            System.out.println("3 - Madaline");
             System.out.println("0 - Sair");
             System.out.println("====================");
             entrada = e.nextInt();
@@ -23,6 +26,9 @@ public class Main {
                     break;
                 case 2:
                     a.executar();
+                    break;
+                case 3:
+                    m.executar();
                     break;
                 case 0:
                     break;
