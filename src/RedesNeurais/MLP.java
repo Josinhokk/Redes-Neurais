@@ -9,17 +9,18 @@ public class MLP implements Executor {
         int epocas = 0;
 
         double matriz[][] = {
-                {-1, 0, 0, 0},
-                {-1, 1, 0, 1},
-                {-1, 0, 1, 1},
-                {-1, 1, 1, 0}};
+                {-1, 0, 0, 0, 1},
+                {-1, 1, 0, 1, 0},
+                {-1, 0, 1, 1, 0},
+                {-1, 1, 1, 0, 1}};
 
         int nEntradas = 3;
         int nNeuronios = 3;
 
         double[][] wOculta = new double[nNeuronios][nEntradas];
-        //saida
-        double[][] wSaida = new double[1][nNeuronios];
+
+        //saida é o peso do segundo conjunto de neuronios que vai receber a saida da camada oculta de entrada
+        double[][] wSaida = new double[2][nNeuronios];
 
         //gerando pesos da camada oculta
         for (int i = 0; i < nEntradas; i++) {
@@ -29,9 +30,12 @@ public class MLP implements Executor {
         }
 
         //gerando pesos do w saida
-        for (int i = 0; i < nNeuronios; i++) {
-            wSaida[0][i] = (Math.random() * 2) - 1;
+        for(int i = 0; i < 2 ; i++){
+            for (int j = 0; j < nNeuronios; j++) {
+                wSaida[i][j] = (Math.random() * 2) - 1;
+            }
         }
+
 
         while (epocas < 10000) {
 
@@ -51,31 +55,61 @@ public class MLP implements Executor {
 
                 }
                 //calculando a "entrada" do proximo neuronio
-                double somaSaida = 0;
+                double[] yFinal = new double[2];
 
-                for (int j = 0; j < nNeuronios; j++) {
-                    somaSaida += yOculta[j] * wSaida[0][j];
+
+                for(int linha = 0; linha < 2; linha++){
+                    //zerar a soma no inicio de cada linha pq cada linha é um neuronio
+                    double somaSaida = 0;
+
+                    for (int j = 0; j < nNeuronios; j++) {
+                        //aqui estamos fazendo o calculo de x e w do proximo neuronio w saida é os pesos gerados aleatoriamente
+                        //x é o yOculta que é a saida dos neuronios da primeira camada
+                        somaSaida += yOculta[j] * wSaida[linha][j];
+                    }
+
+                    //ja que teremos que 2 saidas target temos que armazenar essas 2 saidas
+                    //saida final
+                    yFinal[linha] = 1.0 / (1.0 + Math.exp(-somaSaida));
                 }
-                //saida final
-                double yFinal = 1.0 / (1.0 + Math.exp(-somaSaida));
+
+
+
+
 
                 //BACKPROPAGATION agora
                 //Calcular o erro de saida
-                double t = matriz[i][3];
-                double deltaSaida = (t - yFinal) * yFinal * (1 - yFinal);
+                double[] t = {matriz[i][3], matriz[i][4]};
+                double[] deltaSaida = new double[2];
+
+                //aqui calculamos o "erro" de cada saida comparado com o tgt
+                for(int j = 0; j < 2; j++){
+                    deltaSaida[j] = (t[j] - yFinal[j]) * yFinal[j] * (1 - yFinal[j]);
+                }
+
 
                 //vetor para guardar o erro de cada neu
                 double[] deltaOculto = new double[nNeuronios];
 
                 for (int j = 0; j < nNeuronios; j++) {
-                    deltaOculto[j] = yOculta[j] * (1 - yOculta[j]) * (deltaSaida * wSaida[0][j]);
+                    // Somar os erros vindos das 2 saídas
+                    double somaErro = 0;
+                    for (int saida = 0; saida < 2; saida++) {
+                        somaErro += deltaSaida[saida] * wSaida[saida][j];
+                    }
+
+                    // Aplicar na fórmula do deltaOculto
+                    deltaOculto[j] = yOculta[j] * (1 - yOculta[j]) * somaErro;
                 }
 
                 //Atualizar os pesos da Camada de Saída
                 // Quem é a entrada da saída? É o yOculta!
-                for (int j = 0; j < nNeuronios; j++) {
-                    wSaida[0][j] = wSaida[0][j] + n * deltaSaida * yOculta[j];
+                for(int linha = 0; linha < 2; linha++){
+                    for (int j = 0; j < nNeuronios; j++) {
+                        wSaida[linha][j] = wSaida[linha][j] + n * deltaSaida[linha] * yOculta[j];
+                    }
                 }
+
 
                 //Atualizar os pesos da Camada Oculta
                 // Quem é a entrada da oculta? É a matriz original!
@@ -89,13 +123,12 @@ public class MLP implements Executor {
             }
             epocas++;
         }
-        System.out.println("=== TESTE FINAL MLP (XOR) ===");
+        System.out.println("=== TESTE FINAL MLP (2 SAÍDAS) ===");
         System.out.println("Treinamento concluído em " + epocas + " épocas.");
         System.out.println("---------------------------------------------------------");
 
-        // Passando os dados pela rede treinada (Apenas o Forward Pass)
         for (int i = 0; i < matriz.length; i++) {
-
+            // Calcular yOculta (forward pass)
             double[] yO = new double[nNeuronios];
             for (int linha = 0; linha < nNeuronios; linha++) {
                 double soma = 0;
@@ -105,15 +138,22 @@ public class MLP implements Executor {
                 yO[linha] = 1.0 / (1.0 + Math.exp(-soma));
             }
 
-            double somaSaida = 0;
-            for (int j = 0; j < nNeuronios; j++) {
-                somaSaida += yO[j] * wSaida[0][j];
+            // Calcular yFinal (as 2 saídas)
+            double[] yF = new double[2];
+            for(int linha = 0; linha < 2; linha++){
+                double somaSaida = 0;
+                for (int j = 0; j < nNeuronios; j++) {
+                    somaSaida += yO[j] * wSaida[linha][j];
+                }
+                yF[linha] = 1.0 / (1.0 + Math.exp(-somaSaida));
             }
-            double yFinal = 1.0 / (1.0 + Math.exp(-somaSaida));
 
-            // Imprimindo o resultado
-            System.out.printf("Entrada: [%2.0f, %2.0f] | Target: %.0f | Saída Bruta: %.4f | Arredondado: %d\n",
-                    matriz[i][1], matriz[i][2], matriz[i][3], yFinal, Math.round(yFinal));
+            // Imprimir resultado
+            System.out.printf("Entrada: [%2.0f, %2.0f] | Targets: [%.0f, %.0f] | Saídas: [%.4f, %.4f] | Arredondado: [%d, %d]\n",
+                    matriz[i][1], matriz[i][2],
+                    matriz[i][3], matriz[i][4],
+                    yF[0], yF[1],
+                    Math.round(yF[0]), Math.round(yF[1]));
         }
 
     }
