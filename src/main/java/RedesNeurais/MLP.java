@@ -43,6 +43,16 @@ public class MLP implements Executor {
             }
         }
 
+        // Criar as janelas vazias
+        JFrame frameY1 = criarJanelaVazia("Gráfico Y1", 0, 100);
+        JFrame frameY2 = criarJanelaVazia("Gráfico Y2", 850, 100);
+
+        // Arrays para labels
+        String[] labels = {"[0,0]", "[1,0]", "[0,1]", "[1,1]"};
+
+        // Arrays para guardar resultados temporários
+        double[] tempY1 = new double[4];
+        double[] tempY2 = new double[4];
 
         while (epocas < 100000) {
 
@@ -123,6 +133,40 @@ public class MLP implements Executor {
                     }
                 }
 
+                // Atualizar gráficos a cada 100 épocas
+                if (epocas % 100 == 0) {
+                    // Calcular yFinal para cada linha da matriz (forward pass)
+                    for (int cont = 0; cont < matriz.length; cont++) {
+                        // Calcular yOculta
+                        double[] yO = new double[nNeuronios];
+                        for (int linha = 0; linha < nNeuronios; linha++) {
+                            double soma = 0;
+                            for (int j = 0; j < nEntradas; j++) {
+                                soma += wOculta[linha][j] * matriz[cont][j];
+                            }
+                            yO[linha] = 1.0 / (1.0 + Math.exp(-soma));
+                        }
+
+                        // Calcular yFinal
+                        double[] yF = new double[2];
+                        for(int linha = 0; linha < 2; linha++){
+                            double somaSaida = 0;
+                            for (int j = 0; j < nNeuronios; j++) {
+                                somaSaida += yO[j] * wSaida[linha][j];
+                            }
+                            yF[linha] = 1.0 / (1.0 + Math.exp(-somaSaida));
+                        }
+
+                        // Guardar resultados
+                        tempY1[cont] = yF[0];
+                        tempY2[cont] = yF[1];
+                    }
+
+                    // Atualizar os gráficos
+                    atualizarGrafico(frameY1, tempY1, labels, "Saída Y1 - Época " + epocas, "Y1");
+                    atualizarGrafico(frameY2, tempY2, labels, "Saída Y2 - Época " + epocas, "Y2");
+                }
+
 
             }
             epocas++;
@@ -131,10 +175,7 @@ public class MLP implements Executor {
         System.out.println("Treinamento concluído em " + epocas + " épocas.");
         System.out.println("---------------------------------------------------------");
 
-        // Arrays para guardar os resultados
-        double[] resultadosY1 = new double[4];
-        double[] resultadosY2 = new double[4];
-        String[] labels = new String[4];
+
 
         for (int i = 0; i < matriz.length; i++) {
             // Calcular yOculta (forward pass)
@@ -155,10 +196,7 @@ public class MLP implements Executor {
                     somaSaida += yO[j] * wSaida[linha][j];
                 }
                 yF[linha] = 1.0 / (1.0 + Math.exp(-somaSaida));
-                // Guardar os resultados
-                resultadosY1[i] = yF[0];
-                resultadosY2[i] = yF[1];
-                labels[i] = String.format("[%.0f, %.0f]", matriz[i][1], matriz[i][2]);
+
             }
 
             // Imprimir resultado
@@ -168,54 +206,37 @@ public class MLP implements Executor {
                     yF[0], yF[1],
                     Math.round(yF[0]), Math.round(yF[1]));
         }
-        mostrarGraficosY1(resultadosY1, resultadosY2, labels);
     }
 
-    private void mostrarGraficosY1(double[] resultadosY1, double[] resultadosY2, String[] labels) {
+    private JFrame criarJanelaVazia(String titulo, int x, int y) {
+        JFrame frame = new JFrame(titulo);
+        frame.setSize(800, 600);
+        frame.setLocation(x, y);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setAlwaysOnTop(true);
+        frame.setVisible(true);
+        return frame;
+    }
 
-        JFrame frame1 = new JFrame("Gráfico Y1");
-        JFrame frame2 = new JFrame("Gráfico Y2");
-
-        int largura = 800;
-        int altura = 600;
-
-        DefaultCategoryDataset datasetY1 = new DefaultCategoryDataset();
-        DefaultCategoryDataset datasetY2 = new DefaultCategoryDataset();
-
-        for (int i = 0; i < resultadosY1.length; i++) {
-            datasetY1.addValue(resultadosY1[i], "Y1", labels[i]);
+    private void atualizarGrafico(JFrame frame, double[] resultados, String[] labels, String titulo, String labelY) {
+        // Criar dataset com os dados atuais
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        for (int i = 0; i < resultados.length; i++) {
+            dataset.addValue(resultados[i], labelY, labels[i]);
         }
 
-        for (int i = 0; i < resultadosY2.length; i++) {
-            datasetY2.addValue(resultadosY2[i], "Y2", labels[i]);
-        }
-
-        JFreeChart chart1 = ChartFactory.createLineChart(
-                "Saída Y1",
+        // Criar o gráfico
+        JFreeChart chart = ChartFactory.createLineChart(
+                titulo,
                 "Entradas [x1, x2]",
-                "Valor de Y1",
-                datasetY1
+                "Valor",
+                dataset
         );
 
-        JFreeChart chart2 = ChartFactory.createLineChart(
-                "Saída Y2",
-                "Entradas [x1, x2]",
-                "Valor de Y2",
-                datasetY2
-        );
-
-        ChartPanel panel = new ChartPanel(chart1);
-        panel.setPreferredSize(new java.awt.Dimension(largura, altura));
-        ChartPanel panel2 = new ChartPanel(chart2);
-        panel2.setPreferredSize(new java.awt.Dimension(largura, altura));
-
-        frame1.setContentPane(panel);
-        frame1.pack();
-        frame1.setVisible(true);
-
-        frame2.setContentPane(panel2);
-        frame2.pack();
-        frame2.setVisible(true);
+        // Atualizar o conteúdo da janela
+        ChartPanel panel = new ChartPanel(chart);
+        frame.setContentPane(panel);
+        frame.revalidate();
     }
 
 }
